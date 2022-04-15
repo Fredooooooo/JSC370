@@ -27,12 +27,12 @@ library(ggplot2)
 
 ## Introduction
 
-Tennis is a popular sport around the world, and those professional tennis players who maintained a high ranking in ATP seem to have something in common. There are already research studying the Association between body height and serve speed in elite tennis players. For example, body height of the men explained 27% of the variance of fastest serve in a match (Vaverka & Cernosek, 2013). Serving speed may not directly contribute to a tennis player’s ranking in tournaments, and there could be more potential factors affecting the performance of tennis players. Therefore, we raise our research question as how could some physical factors and experience of a tennis player be used to explain the variation observed in rankings of 639 players participated in 2017 ATP tournaments? By exploring the relationship between tennis players’ physical characteristics, experience, and their performance, we could help coaches to better recognize if someone could be a good tennis player and inspire tennis players what they can improve on in order to making progress. The goal of this research is to find a model that is not overly complicated, but also having reasonable properties required to make good predictions.
+Tennis is a popular sport around the world, and one of the worldwide top-tier tennis tours for men is ATP tour organized by the Association of Tennis Professionals. Those professional tennis players who maintained a high ranking in ATP seem to have something in common. There are already research studying the Association between body height and serve speed in elite tennis players. For example, body height of the men explained 27% of the variance of fastest serve in a match (Vaverka & Cernosek, 2013). Serving speed may not directly contribute to a tennis player’s ranking in tournaments, and there could be more potential factors affecting the performance of tennis players. Therefore, we raise our research question as how could some physical factors and experience of a tennis player be used to explain the variation observed in rankings of 639 players participated in 2017 ATP tournaments. Moreover, if given the physical characteristics and experience of a player, can we predict his ranking in a range of 2074 tennis players from ATP? By exploring the relationship between tennis players’ physical characteristics, experience, and their performance, we could help coaches to better recognize if someone could be a good tennis player and inspire tennis players what they can improve on in order to making progress. The goal of this research is to find a model that is not overly complicated, but also having reasonable properties required to make good predictions.
 
 ## Methods
 The dataset we used is the ATP World Tour tennis data. “This dataset contains tennis data from the ATP World Tour website. The data contains ATP tournaments, rankings and player’s overview. The latest available data is for 2017.” (ATP World Tour, 2018) The dataset can be downloaded from the url: 'https://datahub.io/sports-data/atp-world-tour-tennis-data/datapackage.json' or website 'https://datahub.io/sports-data/atp-world-tour-tennis-data#r', we only require the 9th and 10th csv file from this json file. We provided two methods to read in the dataset. The first one gives the url path provided by the json file to read.csv(), which will takes a long time to download from the website. The second one requires the downloaded csv file stored in the same path as the rmd file, and then apply read.csv() directly on the path 'rankings_1973-2017_csv.csv' and 'player_overviews_unindexed_csv.csv'.
 
-The outcome variable and predictors were contained in two different datasets we loaded. The first dataset contains the ranking of tennis players every week from 1973 to 2017, which is a lot of data. In order to perform the most up-to-date analysis as well as to obtain a continuous outcome variable, I averaged the ranking of tennis players over the whole year 2017, so that each tennis player has one corresponding average ranking. Similarly, I averaged the age and number of tournaments played in 2017 as well. This process is done by using filter() from dplyr to leave only those observations about 2017 in the dataset, and aggregate() to calculate the mean of rank, age, and tournaments played to be new variables in the dataset. Then we used merge() from dplyr by player_id to merge two dataset into one, and only kept the following variables after applying select() on the joint dataset:
+The outcome variable and predictors were contained in two different datasets we loaded. The first dataset contains the ranking of tennis players every week from 1973 to 2017, which is a lot of data. And each player's ranking varies several times in one year since the ranking is updated per race in that year. In order to perform the most up-to-date analysis as well as to obtain a continuous outcome variable, I averaged the ranking of each tennis player over the whole year 2017, so that each tennis player has a corresponding average of his ranking in 2017. Similarly, I averaged the age and number of tournaments played in 2017 as well. This process is done by using filter() from dplyr to leave only those observations about 2017 in the dataset, and aggregate() to calculate the mean of rank, age, and tournaments played to be new variables in the dataset. Then we used merge() from dplyr by player_id to merge two dataset into one, and only kept the following variables after applying select() on the joint dataset:
 
   “weight_kg”: body weight in kg of the tennis player in 2017. 
   “height_cm”: body height in cm of the tennis player in 2017.
@@ -69,9 +69,9 @@ path_to_file = json_data$resources$path[10]
 data_raw1 <- read.csv(url(path_to_file))
 ```
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE}
+```{r, message=FALSE, echo=FALSE, warning=FALSE, cache=TRUE}
 data_raw1 <- read_csv('player_overviews_unindexed_csv.csv')
-data_raw2 <- read_csv('rankings_1973-2017_csv.csv')
+data_raw2 <- readr::read_csv(unzip('rankings_1973-2017_csv.zip', 'rankings_1973-2017_csv.csv'))
 data_raw2 <- data_raw2 %>% filter(`week_year` == '2017')
 data_raw2 <- aggregate( list(data_raw2$rank_number, data_raw2$player_age, data_raw2$tourneys_played), by = list(data_raw2$player_id), mean )
 names(data_raw2)[1] <- "player_id"
@@ -144,18 +144,19 @@ hist(jointdataset$average_tourneys_played,xlab='average tourneys played', main =
 For binary variables in the dataset, their bar plots are given below. There are only 80 left-hand players where majority being right-hand players, and 104 one-handed backhand players where majority being two-handed backhand players. This indicates that data are very imbalanced in both variables. 
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.height=3, fig.cap="Barplot for binary variables"}
-jointdataset %>% 
+require(gridExtra)
+plot1 <- jointdataset %>% 
   ggplot(aes(x=handedness)) +
   geom_bar(fill = "skyblue3")
-jointdataset %>% 
+plot2 <- jointdataset %>% 
   ggplot(aes(x=backhand)) +
   geom_bar(fill = "skyblue3")
+grid.arrange(plot1, plot2, ncol=2)
 ```
 
-\newpage
 From plots presenting below, we can see a clear linear pattern in the scatterplot between average rank and average tourneys played. Since the slope is negative, this suggest that more tourneys a player has played, the better rank he is expected to have. The correlations in other plots are not very obvious to see from the plot, while the right-handed players may perform a little bit better than left-handed players since the median of them is a little bit larger.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="plots showing correlations between each predictor and the response variable"}
+```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="plots showing correlations between each predictor and the response variable", fig.height=7}
 par(mfrow=c(3,2))
 # scatter plots
 plot(jointdataset$weight_kg, jointdataset$average_rank, 
@@ -197,17 +198,17 @@ boxplot(jointdataset$average_tourneys_played,xlab='average tourneys played', mai
 ```
 
 \newpage
-The following plot shows the scatterplot of average height and average rank in each category of handedness. We can see that negative linear relations in both category, while the slope seems to be more negative in the right-handed group. This trend suggest that higher players are expected to have better rank, and a right handed player is more affected by height. This conclusion lines up with the hypothesis we had from the summary statistics. 
+The following plot shows the scatterplot of average height and average rank in each category of handedness. Lines on plots are simple linear regression line between rank and height in two groups. We can see negative linear relations in both category, while the slope seems to be more negative in the right-handed group. This trend suggest that higher players are expected to have better rank, and a right handed player is more affected by height. This conclusion lines up with the hypothesis we had from the summary statistics. 
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Scatterplot of height(cm) vs. average rank grouped by handedness"}
+```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Scatterplot of height(cm) vs. average rank grouped by handedness", fig.width=8}
 jointdataset %>% ggplot(aes(x = height_cm, y = average_rank)) + geom_point() + geom_smooth(method='lm', formula= y~x) + ggtitle("Scatterplot of height(cm) vs. average rank grouped by handedness") + xlab("height") + ylab("average rank") + facet_wrap(jointdataset$handedness)
 ```
 
 \newpage
 
-The following plot shows the scatterplot of average height and average rank in each category of backhand. This pair of plots present a interesting pattern, where we can see a negative linear relations in two-handed backhand category, while the slope become a slight positive one in the one-handed backhand group. This trend may suggest that the conclusion we had before saying that higher players are expected to have better rank is not suitable on one-handed backhand players. However, it's also possible that the slight positive trend is due to a lack of observations, since there are only 104 players in this category.
+The following plot shows the scatterplot of average height and average rank in each category of backhand. Lines on plots are simple linear regression line between rank and height in two groups. This pair of plots present a interesting pattern, where we can see a negative linear relations in two-handed backhand category, while the slope become a slight positive one in the one-handed backhand group. This trend may suggest that the conclusion we had before saying that higher players are expected to have better rank is not suitable on one-handed backhand players. However, it's also possible that the slight positive trend is due to a lack of observations, since there are only 104 players in this category.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Scatterplot of height(cm) vs. average rank grouped by backhand"}
+```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Scatterplot of height(cm) vs. average rank grouped by backhand", fig.width=8}
 jointdataset %>% ggplot(aes(x = height_cm, y = average_rank)) + geom_point() + geom_smooth(method='lm', formula= y~x) + ggtitle("Scatterplot of height(cm) vs. average rank grouped by backhand") + xlab("height") + ylab("average rank") + facet_wrap(jointdataset$backhand)
 ```
 
@@ -240,7 +241,7 @@ We first built a linear regression model taking account into all predictors. Fro
 r <- resid(mod)
 qqnorm(r)
 qqline(r)
-# need transformation to predictors as well
+# need transformation to response variable
 ```
 ```{r, eval=FALSE, message=FALSE, echo=FALSE, warning=FALSE}
 # Transform the response in both the jointdataset and test
@@ -252,12 +253,11 @@ summary(p)
 
 ```
 
-The automated transformation result in applying a power of -0.5 to height, and a power of 0.5 to average rank. Then we refit the model and here is the summary of the model. From this summary, we can see that the square root of rank is expected to be -4.98 if given all other predictors as 0. This interpretation will not be so useful since it's impossible for all other predictors to be 0 and having a negative square root. We can also see that the square root of rank is expected to decrease 0.96 given a one-unit increase in the average tourneys played while holding other variables in the model constant. Moreover, the square root of rank is expected to decrease 0.51 given a one-unit increase in the average age while holding other variables in the model constant, and the square root of rank is expected to increase 821.80 given a one-unit increase in the negative square root of height while holding other variables in the model constant. Note that since the height is taking a negative power, the relation between height and rank should be negative instead. From the p values of variables, we can see that only average tourneys played, age, and height are significant linear predictors in the model. We also obtained the R-squared to be 0.6434, which means that the linear model explains 64.34% of variance in FEV. The adjusted R^2 is 0.64, which is not bad.
+The automated transformation result in applying a power of 0.5 to average rank. Then we refit the model and here is the summary of the model. From this summary, we can see that the square root of rank is expected to be 85.83 if given all other predictors as 0. This interpretation will not be so useful since it's impossible for predictors such as height and weight to be 0. We can also see that the square root of rank is expected to decrease 0.96 given a one-unit increase in the average tourneys played while holding other variables in the model constant. Moreover, the square root of rank is expected to decrease 0.51 given a one-unit increase in the average age while holding other variables in the model constant, and the square root of rank is expected to decrease 0.17 given a one-unit increase in the average height while holding other variables in the model constant. From the p values of variables, we can see that only average tourneys played, age, and height are significant linear predictors in the model. And these three predictors all had a negative relationship with ranking meaning that a higher height and more experiences correspond to better ranking. We also obtained the R-squared to be 0.6436, which means that the linear model explains 64.36% of variance in Player's ranking. The adjusted R^2 is 0.6402, which is not bad.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-jointdataset$negative_square_root_of_height <- I((jointdataset$height_cm)^-0.5)
 jointdataset$square_root_of_rank <- I((jointdataset$average_rank)^0.5)
-full2 <- lm(square_root_of_rank ~ ., data=jointdataset[,-c(1,2,4)])
+full2 <- lm(square_root_of_rank ~ ., data=jointdataset[,-c(1,2)])
 # summary(full2)
 
 # kable extra
@@ -271,8 +271,9 @@ The QQ plot and residual plots for the model after transformation is given below
 # Residual plots
 par(mfrow=c(3,3))
 plot(resid(full2)~fitted(full2), xlab="fitted", ylab="Residuals")
-for(i in c(3,5,6,7,8,9)){
-  plot(resid(full2)~jointdataset[,i], xlab=names(jointdataset)[i], ylab="Residuals")
+names <- c("weight", "height", "average touneys played", "average age", "backhand", "handedness")
+for(i in c(3,4,5,6,7,8)){
+  plot(resid(full2)~jointdataset[,i], xlab=names[i], ylab="Residuals")
 }
 r <- resid(full2)
 x <- as.data.frame(r)
@@ -286,21 +287,23 @@ summary(full2)$adj.r.squared
 ```
 
 \newpage
-The following plot presents a linear regression line and gam regression line for negative square root of height and square root of rank. These two lines are very close which means that the relationship between negative square root of height and square root of rank could be explained by linear regression very well, and the gam regression don't need a non-linear line to explain this relationship. Moreover, we built the gam model where we put a cubic regression spline on negative square root of height. The adjusted R square for this gam model is 0.64, which is the same to the linear model.
+The following plot presents a linear regression line and gam regression line for average height and square root of rank. These two lines are very close which means that the relationship between height and square root of rank could be explained by linear regression well enough, and the gam regression don't need a non-linear line to explain this relationship. Moreover, we built the gam model where we put a cubic regression spline on average height. The adjusted R square for this gam model is 0.64, which is the same to the linear model.
 
-```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Scatterplot of height(cm)^(-0.5) vs. average rank^(0.5)"}
-ggplot(jointdataset, aes(x=negative_square_root_of_height, y=square_root_of_rank)) + geom_point() + geom_smooth(method="lm") + geom_smooth(method = "gam", col=2, formula = y ~ s(x, bs="cs"))
+```{r, message=FALSE, echo=FALSE, warning=FALSE, fig.cap="Scatterplot of height(cm) vs. square root of average rank"}
+ggplot(jointdataset, aes(x=height_cm, y=square_root_of_rank)) + geom_point() + geom_smooth(method="lm") + geom_smooth(method = "gam", col=2, formula = y ~ s(x, bs="cs"))
 ```
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
 library(mgcv)
-gam_mod <- gam(square_root_of_rank ~ s(negative_square_root_of_height, bs="cs")+weight_kg+average_age+handedness+backhand+average_tourneys_played, data=jointdataset)
+gam_mod <- gam(square_root_of_rank ~ s(height_cm, bs="cs")+weight_kg+average_age+handedness+backhand+average_tourneys_played, data=jointdataset)
 # summary(gam_mod)
 ```
 ## Conclusion
 The linear model is telling that athletes are expected to have better rank if he played more tourneys while holding other variables the same, or he is older holding other variables the same, or he is higher holding other variables the same. Note that this model aligns with the study mentioned in introduction since height of the athletes could explain the variation of the serve speed which further explains the variation of ranking. The gam model has the same adjusted R square, which means that the linear model could fit the data well enough. And the gam model also suggest that a higher tennis athlete is expected to have a better ranking. In the future research, this linear model could be further improved to obtain a larger adjusted R square by performing model selection process on it. Similarly, the gam model could be further improved by trying cubic regression spline on different predictors.
 
 The linear model also has some limitations such as the QQ plot has some deviations at right end and the residual plot for average age has a cluster on the left. Moreover, the comparison between two models are preliminary since we are only looking at the adjusted R square. We could compare their AICs and BICs in the future. Lastly, the research is conducted on the 2017 dataset since this is the latest dataset we found, the result concluded from this dataset may not be the case 10 years later.
+
+Limitation: Limited to 2074 players ranking, since a rank 5 in 10 players should be interpreted differently with rank 5 in 1000 players.
 
 ## References
 ATP World Tour. (2018, October). ATP World Tour tennis data. Retrieved from DataHub:                         https://datahub.io/sports-data/atp-world-tour-tennis-data#r
